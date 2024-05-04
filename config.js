@@ -1,12 +1,11 @@
 require('dotenv').config();
 
-// Check for the presence of BOT_TOKEN in the environment variables
 if (!process.env.BOT_TOKEN) {
-  console.error("ERROR: The BOT_TOKEN environment variable is not set.");
-  process.exit(1); // Exit the process with an error code
+  console.error("ERROR: The BOT_TOKEN environment variable is not defined.");
+  process.exit(1);
 }
 
 module.exports = {
-  botToken: process.env.BOT_TOKEN,
-  prefix: process.env.PREFIX || "!", // Use "!" as the default prefix if none is provided
+  discordBotToken: process.env.BOT_TOKEN,
+  commandPrefix: process.env.PREFIX || "!",
 };
