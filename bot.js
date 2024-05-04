@@ -1,37 +1,33 @@
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
 require('dotenv').config();
+const fs = require('fs');
 
 const client = new Client({
     intents: [
-        GatewayIntentBits.Guilds, 
-        GatewayIntentBits.GuildMessages, 
-        GatewayIntentBits.MessageContent, 
-        GatewayIntentBits.GuildMembers
-    ]
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMembers,
+    ],
 });
 
 client.commands = new Collection();
 
-const fs = require('fs');
-
-try {
-    const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
-
-    for (const file of commandFiles) {
-        try {
-            const command = require(`./commands/${file}`);
-            client.commands.set(command.name, command);
-        } catch (error) {
-            console.error(`Error loading ${file}:`, error);
-        }
-    }
-} catch (error) {
-    console.error('Error reading command directory:', error);
+const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
+for (const file of commandFiles) {
+    const command = require(`./commands/${file}`);
+    client.commands.set(command.name, command);
 }
 
-client.once('ready', () => {
-    console.log('Ready!');
-});
+const eventFiles = fs.readdirSync('./events').filter(file => file.endsWith('.js'));
+for (const file of eventFiles) {
+    const event = require(`./events/${file}`);
+    if (event.once) {
+        client.once(event.name, (...args) => event.execute(...args, client));
+    } else {
+        client.on(event.name, (...args) => event.execute(...args, client));
+    }
+}
 
 client.on('messageCreate', message => {
     if (!message.content.startsWith('!') || message.author.bot) return;
@@ -39,25 +35,19 @@ client.on('messageCreate', message => {
     const args = message.content.slice(1).trim().split(/ +/);
     const commandName = args.shift().toLowerCase();
 
-    const command = client.commands.get(commandName);
+    const command = client.commands.get(commandName) 
+        || client.commands.find(cmd => cmd.aliases && cmd.aliases.includes(commandName));
 
     if (!command) return;
 
     try {
-        command.execute(message, args).catch(error => {
-            console.error('Error executing command:', error);
-            message.reply('there was a problem executing that command.');
-        });
+        command.execute(message, args, client);
     } catch (error) {
-        console.error('Error during command execution:', error);
+        console.error('Error executing command:', error);
         message.reply('there was an error trying to execute that command!');
     }
 });
 
-client.on('error', (error) => {
-    console.error('The client encountered an error:', error);
-});
+client.on('error', (error) => console.error('The client encountered an error:', error));
 
-client.login(process.env.DISCORD_TOKEN).catch(error => {
-    console.error('Failed to login:', error);
-});
+client.login(process.env.DISCORD_TOKEN);
