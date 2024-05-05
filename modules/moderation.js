@@ -7,12 +7,14 @@ const spamPatterns = [
     /(.)\1{4,}/,
 ];
 
-function containsForbiddenWords(message) {
-    return forbiddenWords.some(word => new RegExp(`\\b${word}\\b`, 'i').test(message));
-}
+function checkMessage(message) {
+    const hasForbiddenWord = forbiddenWords.some(word => new RegExp(`\\b${word}\\b`, 'i').test(message));
+    if (hasForbiddenWord) return 'forbidden';
 
-function isSpam(message) {
-    return spamPatterns.some(pattern => pattern.test(message));
+    const isSpam = spamPatterns.some(pattern => pattern.test(message));
+    if (isSpam) return 'spam';
+
+    return null;
 }
 
 function warnUser(userId) {
@@ -28,12 +30,15 @@ function banUser(userId) {
 }
 
 function moderateMessage(userId, messageId, message) {
-    if (containsForbiddenWords(message)) {
-        deleteMessage(messageId);
-        warnUser(userId);
-    } else if (isSpam(message)) {
-        deleteMessage(messageId);
-        banUser(userId);
+    switch (checkMessage(message)) {
+        case 'forbidden':
+            deleteMessage(messageId);
+            warnUser(userId);
+            break;
+        case 'spam':
+            deleteMessage(messageId);
+            banUser(userId);
+            break;
     }
 }
 
