@@ -2,29 +2,31 @@ const fs = require('fs');
 const dotenv = require('dotenv');
 dotenv.config();
 
-const commandExecutors = {};
+const commandHandlers = {};
 const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
 
 for (const file of commandFiles) {
-    const command = require(`./commands/${file}`);
-    commandExecutors[command.name] = command.execute;
+    const commandModule = require(`./commands/${file}`);
+    commandHandlers[commandModule.name] = commandModule.execute;
 }
 
-const handleMessage = async (message) => {
+const handleDiscordMessage = async (message) => {
     if (!message.content.startsWith('/') || message.author.bot) return;
+    
     const args = message.content.slice(1).split(/ +/);
     const commandName = args.shift().toLowerCase();
 
-    if (!commandExecutors[commandName]) {
+    if (!commandHandlers[commandName]) {
         message.reply(`Sorry, I don't recognize that command.`);
         return;
     }
+    
     try {
-        await commandExecutors[commandName](message, args);
+        await commandHandlers[commandName](message, args);
     } catch (error) {
         console.error(error);
         message.reply('There was an error trying to execute that command!');
     }
 };
 
-module.exports = { processMessage: handleMessage };
+module.exports = { processMessage: handleDiscordMessage };
