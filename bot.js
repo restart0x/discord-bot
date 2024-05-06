@@ -2,7 +2,7 @@ const { Client, GatewayIntentBits, Collection } = require('discord.js');
 require('dotenv').config();
 const fs = require('fs');
 
-const client = new Client({
+const discordClient = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
@@ -11,43 +11,43 @@ const client = new Client({
     ],
 });
 
-client.commands = new Collection();
+discordClient.commandsRegistry = new Collection();
 
 const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
-for (const file of commandFiles) {
-    const command = require(`./commands/${file}`);
-    client.commands.set(command.name, command);
+for (const commandFile of commandFiles) {
+    const commandModule = require(`./commands/${commandFile}`);
+    discordClient.commandsRegistry.set(commandModule.name, commandModule);
 }
 
 const eventFiles = fs.readdirSync('./events').filter(file => file.endsWith('.js'));
-for (const file of eventFiles) {
-    const event = require(`./events/${file}`);
-    if (event.once) {
-        client.once(event.name, (...args) => event.execute(...args, client));
+for (const eventFile of eventFiles) {
+    const eventModule = require(`./events/${eventFile}`);
+    if (eventModule.once) {
+        discordClient.once(eventModule.name, (...args) => eventModule.execute(...args, discordClient));
     } else {
-        client.on(event.name, (...args) => event.execute(...args, client));
+        discordClient.on(eventModule.name, (...args) => eventModule.execute(...args, discordClient));
     }
 }
 
-client.on('messageCreate', message => {
+discordClient.on('messageCreate', message => {
     if (!message.content.startsWith('!') || message.author.bot) return;
 
-    const args = message.content.slice(1).trim().split(/ +/);
-    const commandName = args.shift().toLowerCase();
+    const commandArgs = message.content.slice(1).trim().split(/ +/);
+    const commandName = commandArgs.shift().toLowerCase();
 
-    const command = client.commands.get(commandName) 
-        || client.commands.find(cmd => cmd.aliases && cmd.aliases.includes(commandName));
+    const commandToExecute = discordClient.commandsRegistry.get(commandName) 
+        || discordClient.commandsRegistry.find(cmd => cmd.aliases && cmd.aliases.includes(commandName));
 
-    if (!command) return;
+    if (!commandToExecute) return;
 
     try {
-        command.execute(message, args, client);
-    } catch (error) {
-        console.error('Error executing command:', error);
-        message.reply('there was an error trying to execute that command!');
+        commandToExecute.execute(message, commandArgs, discordClient);
+    } catch (executionError) {
+        console.error('Error executing command:', executionError);
+        message.reply('There was an error trying to execute that command!');
     }
 });
 
-client.on('error', (error) => console.error('The client encountered an error:', error));
+discordClient.on('error', (discordError) => console.error('The client encountered an error:', discordError));
 
-client.login(process.env.DISCORD_TOKEN);
+discordClient.login(process.env.DISCORD_TOKEN);
