@@ -1,10 +1,32 @@
 require('dotenv').config();
 
-const log = (message) => console.log(`[${new Date().toISOString()}] ${message}`);
+const logLevels = {
+    DEBUG: 'DEBUG',
+    INFO: 'INFO',
+    WARNING: 'WARNING',
+    ERROR: 'ERROR'
+};
+
+const log = (message, level = logLevels.INFO) => console.log(`[${new Date().toISOString()}][${level}] ${message}`);
 
 const logError = (error, message = 'An error occurred', details = '') => {
     const detailMessage = details ? ` Details: ${details}` : '';
-    console.error(`[${new Date().toISOString()}] ${message}:${detailMessage}`, error);
+    console.error(`[${new Date().toISOString()}][ERROR] ${message}:${detailMessage}`, error);
+};
+
+const enhancedLog = (message, level = logLevels.INFO) => {
+    switch (level) {
+        case logLevels.DEBUG:
+        case logLevels.INFO:
+        case logLevels.WARNING:
+            log(message, level);
+            break;
+        case logLevels.ERROR:
+            logError(new Error(message), message);
+            break;
+        default:
+            log(`Unhandled log level: ${level}. Message: ${message}`);
+    }
 };
 
 const safeJSONParse = (str) => {
@@ -36,8 +58,10 @@ async function withErrorLogging(fn) {
 module.exports = {
     log,
     logError,
+    enhancedLog,
     safeJSONParse,
     checkEnvVariable,
     sleep,
-    withErrorLogging
+    withErrorLogging,
+    logLevels 
 };
