@@ -7,6 +7,9 @@ const spamPatterns = [
     /(.)\1{4,}/,
 ];
 
+// Store user warnings count
+const userWarnings = {};
+
 function checkMessage(message) {
     const hasForbiddenWord = forbiddenWords.some(word => new RegExp(`\\b${word}\\b`, 'i').test(message));
     if (hasForbiddenWord) return 'forbidden';
@@ -19,6 +22,18 @@ function checkMessage(message) {
 
 function warnUser(userId) {
     console.log(`User ${userId} has been warned.`);
+    // Increment user warning or add first warning
+    if (!userWarnings[userId]) {
+        userWarnings[userId] = 1;
+    } else {
+        userWarnings[userId]++;
+    }
+    // Check if warnings threshold exceeded
+    if (userWarnings[userId] >= 3) { // Threshold of 3 warnings before ban
+        banUser(userId);
+        // Reset warnings count after ban
+        userWarnings[userId] = 0;
+    }
 }
 
 function deleteMessage(messageId) {
@@ -27,6 +42,7 @@ function deleteMessage(messageId) {
 
 function banUser(userId) {
     console.log(`User ${userId} has been banned.`);
+    // Consider resetting warning count on ban, or leave as is if you want to track post-ban warnings.
 }
 
 function moderateMessage(userId, messageId, message) {
