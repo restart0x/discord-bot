@@ -1,63 +1,58 @@
 require('dotenv').config();
 
-const forbiddenWords = process.env.FORBIDDEN_WORDS.split(',');
+const bannedWords = process.env.FORBIDDEN_WORDS.split(',');
 
-const spamPatterns = [
+const spamDetectionPatterns = [
     /\b(?:free|click here|buy now)\b/i,
     /(.)\1{4,}/,
 ];
 
-// Store user warnings count
-const userWarnings = {};
+const userWarningsCount = {};
 
-function checkMessage(message) {
-    const hasForbiddenWord = forbiddenWords.some(word => new RegExp(`\\b${word}\\b`, 'i').test(message));
-    if (hasForbiddenWord) return 'forbidden';
+function inspectMessageContent(message) {
+    const containsBannedWord = bannedWords.some(word => new RegExp(`\\b${word}\\b`, 'i').test(message));
+    if (containsBannedWord) return 'forbidden';
 
-    const isSpam = spamPatterns.some(pattern => pattern.test(message));
-    if (isSpam) return 'spam';
+    const isIdentifiedAsSpam = spamDetectionPatterns.some(pattern => pattern.test(message));
+    if (isIdentifiedAsSpam) return 'spam';
 
     return null;
 }
 
-function warnUser(userId) {
+function issueWarningToUser(userId) {
     console.log(`User ${userId} has been warned.`);
-    // Increment user warning or add first warning
-    if (!userWarnings[userId]) {
-        userWarnings[userId] = 1;
+    if (!userWarningsCount[userId]) {
+        userWarningsCount[userId] = 1;
     } else {
-        userWarnings[userId]++;
+        userWarningsCount[userId]++;
     }
-    // Check if warnings threshold exceeded
-    if (userWarnings[userId] >= 3) { // Threshold of 3 warnings before ban
-        banUser(userId);
-        // Reset warnings count after ban
-        userWarnings[userId] = 0;
+    if (userWarningsCount[userId] >= 3) {
+        executeBanOnUser(userId);
+        userWarningsCount[userId] = 0;
     }
 }
 
-function deleteMessage(messageId) {
+function removeMessage(messageId) {
     console.log(`Message ${messageId} has been deleted.`);
 }
 
-function banUser(userId) {
+function executeBanOnUser(userId) {
     console.log(`User ${userId} has been banned.`);
-    // Consider resetting warning count on ban, or leave as is if you want to track post-ban warnings.
 }
 
-function moderateMessage(userId, messageId, message) {
-    switch (checkMessage(message)) {
+function evaluateAndActOnMessage(userId, messageId, message) {
+    switch (inspectMessageContent(message)) {
         case 'forbidden':
-            deleteMessage(messageId);
-            warnUser(userId);
+            removeMessage(messageId);
+            issueWarningToUser(userId);
             break;
         case 'spam':
-            deleteMessage(messageId);
-            banUser(userId);
+            removeMessage(messageId);
+            executeBanOnUser(userId);
             break;
     }
 }
 
 module.exports = {
-    moderateMessage,
+    moderateMessage: evaluateAndActOnMessage,
 };
